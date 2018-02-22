@@ -1,0 +1,86 @@
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: {{ template "atlassian-confluence.fullname" . }}
+  labels:
+    app: {{ template "atlassian-confluence.name" . }}
+    chart: {{ template "atlassian-confluence.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ template "atlassian-confluence.name" . }}
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ template "atlassian-confluence.name" . }}
+        release: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8090
+              protocol: TCP
+            - name: controller
+              containerPort: 8091
+              protocol: TCP
+          env:
+            - name: JVM_MINIMUM_MEMORY
+              value: {{ .Values.jvm.minimumMemory | quote }}
+            - name: JVM_MAXIMUM_MEMORY
+              value: {{ .Values.jvm.maximumMemory | quote }}
+            - name: CATALINA_OPTS
+              value: "-Xms{{ .Values.jvm.minimumMemory }} -Xmx{{ .Values.jvm.maximumMemory }}"
+            {{- if .Values.proxy.enabled }}
+            - name: CATALINA_CONNECTOR_PROXYNAME
+              value: {{ .Values.proxy.host | quote }}
+            - name: CATALINA_CONNECTOR_PROXYPORT
+              value: {{ .Values.proxy.port }}
+            - name: CATALINA_CONNECTOR_SCHEME
+              value: {{ .Values.proxy.scheme | quote }}
+            - name: CATALINA_CONNECTOR_SECURE
+              value: {{ .Values.proxy.path | quote }}
+            {{- end }}
+{{- if .Values.additionalEnv }}
+{{ toYaml .Values.additionalEnv | indent 12 }}
+{{- end }}
+          livenessProbe:
+            httpGet:
+              path: /secure
+              port: http
+{{ toYaml .Values.livenessProbe | indent 12 }}
+          readinessProbe:
+            tcpSocket:
+              port: http
+{{ toYaml .Values.readinessProbe | indent 12 }}
+          volumeMounts:
+          - mountPath: /var/atlassian/application-data/confluence
+            name: {{ template "atlassian-confluence.fullname" . }}
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+      volumes:
+      - name: {{ template "atlassian-confluence.fullname" . }}
+      {{- if .Values.persistence.enabled }}
+        persistentVolumeClaim:
+          claimName: {{ template "atlassian-confluence.fullname" . }}
+      {{- else }}
+        emptyDir: {}
+      {{ end }}
+    {{- with .Values.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+{{ toYaml . | indent 8 }}
+    {{- end }}
