@@ -14,7 +14,7 @@ service:
   port: 8090
 
 ##
-## Configure ingress resource that allow you to access the instalation.
+## ingress: Configure ingress resource that allow you to access the instalation.
 ## ref: http://kubernetes.io/docs/user-guide/ingress/
 ##
 ingress:
@@ -56,7 +56,6 @@ persistence:
   # storageClass: "-"
   accessMode: ReadWriteOnce
   size: 8Gi
-
 ##
 ## JIRA runs in a Java virtual machine (JVM), and this JVM is allocated an amount of 
 ## memory to enable JIRA to run. These amounts can be manually configured.
@@ -65,7 +64,14 @@ persistence:
 jvm:
   minimumMemory: 256m
   maximumMemory: 786m
-
+##
+## additionalEnv: Pass additional environment variables to the JVM
+##
+additionalEnv:
+  - name: test
+    value: 123
+  - name: somethingelse
+    value: "asdf asdf asdf"
 ##
 ## The host and port properties indicate the proxy server and the port that the HTTP 
 ## protocol handler will use. (https://confluence.atlassian.com/jirakb/how-to-configure-an-outbound-http-and-https-proxy-for-jira-applications-247857187.html)
@@ -77,6 +83,10 @@ proxy:
   scheme: https
   path: /secure
 
+##
+## resources: Configure resource requests and limits
+## ref: http://kubernetes.io/docs/user-guide/compute-resources/
+##
 resources:
 ##
 ## We usually recommend not to specify default resources and to leave this as a conscious
@@ -84,15 +94,19 @@ resources:
 ## resources, such as Minikube. If you do want to specify resources, uncomment the following
 ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
 ##
-#  limits:
-#    cpu: 100m
-#    memory: 128Mi
-#  requests:
-#    cpu: 100m
-#    memory: 128Mi
+  limits:
+    cpu: 100m
+    memory: 128Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
 ##
-## Configure extra options for liveness and readiness probes
-## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes)
+## Configure Liveness and Readiness Probes
+## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes
+##
+## livenessProbe: Many applications running for long periods of time eventually transition to broken
+## states, and cannot recover except by being restarted. Kubernetes provides liveness probes to detect and remedy such situations.
+## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
 ##
 livenessProbe:
   initialDelaySeconds: 120
@@ -100,6 +114,12 @@ livenessProbe:
   timeoutSeconds: 5
   failureThreshold: 6
   successThreshold: 1
+##
+## readinessProbe: Sometimes, applications are temporarily unable to serve traffic. For example, an application  
+## might need to load large data or configuration files during startup. In such cases, you don’t want to kill 
+## the application, but you don’t want to send it requests either.
+## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#define-readiness-probes
+##
 readinessProbe:
   initialDelaySeconds: 30
   periodSeconds: 10
@@ -107,18 +127,21 @@ readinessProbe:
   failureThreshold: 6
   successThreshold: 1
 ##
-## Node labels for pod assignment
-## Ref: https://kubernetes.io/docs/user-guide/node-selection/
+## nodeSelector: For the pod to be eligible to run on a node, the node must have each of the  
+## indicated key-value pairs as labels (it can have additional labels as well)
+## ref: https://kubernetes.io/docs/user-guide/node-selection/ (kubectl get nodes --show-labels)
 ##
-nodeSelector: {}
+nodeSelector:
+  # disktype: ssd
+##
+## tolerations: Taints and tolerations work together to ensure that pods are not scheduled onto inappropriate nodes.
+## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+##
 tolerations: []
+##
+## affinity: There are currently two types of node affinity, called requiredDuringSchedulingIgnoredDuringExecution 
+## and preferredDuringSchedulingIgnoredDuringExecution. You can think of them as “hard” and “soft” respectively
+## ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
+##
 affinity: {}
 
-##
-## Pass additional environment variables to the JVM
-##
-#additionalEnv:
-#  - name: test
-#    value: 123
-#  - name: somethingelse
-#    value: "asdf asdf asdf"

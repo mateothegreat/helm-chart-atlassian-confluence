@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: {{ template "atlassian-confluence.fullname" . }}
   labels:
-    {{ template "basic.labels" . }}
+    {{ template "common.labels" . }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
@@ -17,23 +17,10 @@ spec:
         release: {{ .Release.Name }}
     spec:
       containers:
-        - name: {{ .Chart.Name }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
-          ports:
-            - name: http
-              containerPort: 8090
-              protocol: TCP
-            - name: controller
-              containerPort: 8091
-              protocol: TCP
+        {{ template "containers.image" . }}
           env:
-            - name: JVM_MINIMUM_MEMORY
-              value: {{ .Values.jvm.minimumMemory | quote }}
-            - name: JVM_MAXIMUM_MEMORY
-              value: {{ .Values.jvm.maximumMemory | quote }}
-            - name: CATALINA_OPTS
-              value: "-Xms{{ .Values.jvm.minimumMemory }} -Xmx{{ .Values.jvm.maximumMemory }}"
+            {{ template "env.jvm" . }}
+            {{ template "env.additional" . }}
             {{- if .Values.proxy.enabled }}
             - name: CATALINA_CONNECTOR_PROXYNAME
               value: {{ .Values.proxy.host | quote }}
@@ -44,18 +31,14 @@ spec:
             - name: CATALINA_CONNECTOR_SECURE
               value: {{ .Values.proxy.path | quote }}
             {{- end }}
-{{- if .Values.additionalEnv }}
-{{ toYaml .Values.additionalEnv | indent 12 }}
-{{- end }}
-          livenessProbe:
-            httpGet:
-              path: /secure
-              port: http
-{{ toYaml .Values.livenessProbe | indent 12 }}
-          readinessProbe:
-            tcpSocket:
-              port: http
-{{ toYaml .Values.readinessProbe | indent 12 }}
+          ports:
+            - name: http
+              containerPort: 8090
+              protocol: TCP
+            - name: controller
+              containerPort: 8091
+              protocol: TCP
+          {{ template "health.httpProbes" . }}
           volumeMounts:
           - mountPath: /var/atlassian/application-data/confluence
             name: {{ template "atlassian-confluence.fullname" . }}
